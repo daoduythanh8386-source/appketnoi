@@ -1,0 +1,8 @@
+{
+  "name": "app-ket-noi",
+  "version": "1.0.0",
+  "private": true,
+  "description": "APP KẾT NỐI – danh thiếp QR (PWA tĩnh, triển khai trên Vercel)",
+  "author": "Đào Duy Thanh",
+  "scripts": { "dev": "npx serve ." }
+}

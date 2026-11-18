@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>APP KẾT NỐI – Danh thiếp QR</title>
+<meta name="description" content="Tạo danh thiếp QR, quét và lưu thẳng vào danh bạ. Chạy trên Android, iOS, máy tính bảng và máy tính.">
+<meta name="theme-color" content="#0f766e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="APP KẾT NỐI">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+<!-- Trang công khai: mở từ liên kết chia sẻ -->
+<main id="pub" class="wrap hide">
+  <header class="top"><h1 class="h3d">APP KẾT NỐI</h1><p class="sub">Danh thiếp được chia sẻ với bạn</p></header>
+  <div class="panel">
+    <div class="bc" id="pubCard"></div>
+    <div class="row center">
+      <button class="btn" id="pubSave">Lưu vào danh bạ</button>
+      <button class="btn sec" id="pubOwn">Tạo danh thiếp của tôi</button>
+    </div>
+    <div id="mPub"></div>
+  </div>
+</main>
+
+<div id="app">
+<div class="wrap">
+  <header class="top">
+    <div class="topbar">
+      <h1 class="h3d">APP KẾT NỐI</h1>
+      <button class="btn sec sm" id="bAcct">Tài khoản</button>
+    </div>
+    <p class="sub" id="acct">Danh thiếp QR · quét là lưu vào danh bạ</p>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button data-t="create" class="on">Tạo danh thiếp</button>
+    <button data-t="mine">Danh thiếp của tôi</button>
+    <button data-t="scan">Quét QR</button>
+  </nav>
+
+  <!-- TẠO -->
+  <section id="t-create">
+    <div class="grid">
+      <div class="panel">
+        <h2 class="h3d s" id="formTitle">Thông tin</h2>
+        <label for="f_name">Họ tên *</label><input id="f_name" autocomplete="name">
+        <label for="f_phone">Điện thoại *</label><input id="f_phone" inputmode="tel" autocomplete="tel">
+        <label for="f_email">Email</label><input id="f_email" type="email" autocomplete="email">
+        <label for="f_addr">Địa chỉ</label><input id="f_addr" autocomplete="street-address">
+        <label for="f_company">Công ty</label><input id="f_company" autocomplete="organization">
+        <label for="f_dept">Bộ phận</label><input id="f_dept">
+        <div class="row">
+          <button class="btn" id="bGen">Tạo QR</button>
+          <button class="btn sec" id="bSave">Lưu danh thiếp</button>
+          <button class="btn sec" id="bNew">Làm mới</button>
+        </div>
+        <div id="m1"></div>
+      </div>
+      <div class="panel">
+        <h2 class="h3d s">Xem trước danh thiếp</h2>
+        <div class="bc" id="pv">
+          <p class="nm" id="p_name">Họ tên</p>
+          <p class="co" id="p_co">Công ty · Bộ phận</p>
+          <p><span class="ic">Điện thoại</span><span id="p_phone">—</span></p>
+          <p><span class="ic">Email</span><span id="p_email">—</span></p>
+          <p><span class="ic">Địa chỉ</span><span id="p_addr">—</span></p>
+        </div>
+        <div class="qrbox">
+          <canvas id="qr" width="10" height="10" aria-label="Mã QR danh thiếp"></canvas>
+          <p class="muted" id="qrHint">Nhấn “Tạo QR” để tạo mã.</p>
+        </div>
+        <div class="row center">
+          <button class="btn" id="bPng" disabled>Tải QR (PNG)</button>
+          <button class="btn sec" id="bShare" disabled>Chia sẻ QR</button>
+          <button class="btn sec" id="bLink" disabled>Chia sẻ đường dẫn</button>
+        </div>
+        <div id="m2"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CỦA TÔI -->
+  <section id="t-mine" class="hide">
+    <div class="panel">
+      <h2 class="h3d s">Danh thiếp đã lưu</h2>
+      <p class="muted" id="mineNote"></p>
+      <div class="list" id="list"></div>
+    </div>
+  </section>
+
+  <!-- QUÉT -->
+  <section id="t-scan" class="hide">
+    <div class="grid">
+      <div class="panel">
+        <h2 class="h3d s">Quét mã QR</h2>
+        <p class="muted">Bấm “Mở camera” để dùng máy ảnh của thiết bị. Thông tin sẽ tự điền vào bên cạnh.</p>
+        <div class="camwrap" id="camwrap"><video id="vid" playsinline muted></video><div class="camph" id="camph">Camera đang tắt</div></div>
+        <div class="row">
+          <button class="btn" id="bCam">Mở camera</button>
+          <button class="btn sec" id="bFlip">Đổi camera</button>
+          <button class="btn sec" id="bStop">Tắt</button>
+          <label class="btn sec filebtn">Chọn ảnh QR<input type="file" id="fImg" accept="image/*" capture="environment" class="hide"></label>
+        </div>
+        <div id="m3"></div>
+      </div>
+      <div class="panel">
+        <h2 class="h3d s">Danh thiếp quét được</h2>
+        <div class="bc" id="sv">
+          <p class="nm" id="s_name">—</p>
+          <p class="co" id="s_co">—</p>
+          <p><span class="ic">Điện thoại</span><span id="s_phone">—</span></p>
+          <p><span class="ic">Email</span><span id="s_email">—</span></p>
+          <p><span class="ic">Địa chỉ</span><span id="s_addr">—</span></p>
+        </div>
+        <div class="row">
+          <button class="btn" id="bOk" disabled>Đồng ý – lưu vào danh bạ</button>
+          <button class="btn sec" id="bToForm" disabled>Chép vào form</button>
+        </div>
+        <div id="m4"></div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <div class="h3d brand">APP KẾT NỐI</div>
+    <p>Được làm bởi <strong class="auth"><span class="cc" aria-label="Bản quyền">C</span>Đào Duy Thanh</strong></p>
+    <p class="since">Since 2026</p>
+  </footer>
+</div>
+</div>
+
+<!-- Hộp thoại tài khoản -->
+<dialog id="dlg">
+  <form method="dialog" class="dform" id="dform">
+    <h2 class="h3d s">Tài khoản</h2>
+    <div id="dBody"></div>
+    <div class="row"><button class="btn sec" value="close">Đóng</button></div>
+  </form>
+</dialog>
+
+<script src="/config.js"></script>
+<script src="/lib/qrcode.js"></script>
+<script src="/lib/jsQR.js"></script>
+<script src="/lib/supabase.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>

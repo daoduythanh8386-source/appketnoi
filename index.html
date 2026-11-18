@@ -4,147 +4,204 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>APP KẾT NỐI – Danh thiếp QR</title>
-<meta name="description" content="Tạo danh thiếp QR, quét và lưu thẳng vào danh bạ. Chạy trên Android, iOS, máy tính bảng và máy tính.">
-<meta name="theme-color" content="#0f766e">
+<meta name="description" content="Kết nối – Hợp tác – Thành công. Tạo danh thiếp QR, quét và lưu thẳng vào danh bạ.">
+<meta name="theme-color" content="#0b1d3a">
+<meta name="color-scheme" content="dark">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="APP KẾT NỐI">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="/manifest.webmanifest">
-<link rel="icon" href="/icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" type="image/png" sizes="48x48" href="/icons/favicon-48.png">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
+<div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
 
-<!-- Trang công khai: mở từ liên kết chia sẻ -->
-<main id="pub" class="wrap hide">
-  <header class="top"><h1 class="h3d">APP KẾT NỐI</h1><p class="sub">Danh thiếp được chia sẻ với bạn</p></header>
-  <div class="panel">
+<!-- ===== Trang công khai (mở từ liên kết chia sẻ) ===== -->
+<main id="pub" class="shell hide">
+  <div class="brandrow"><img src="/icons/logo-160.png" alt="" class="logo"><div><h1 class="h3d">APP KẾT NỐI</h1><p class="sub">Danh thiếp được chia sẻ với bạn</p></div></div>
+  <section class="glass">
     <div class="bc" id="pubCard"></div>
     <div class="row center">
-      <button class="btn" id="pubSave">Lưu vào danh bạ</button>
-      <button class="btn sec" id="pubOwn">Tạo danh thiếp của tôi</button>
+      <button class="btn" id="pubSave" type="button">Lưu vào danh bạ</button>
+      <button class="btn ghost" id="pubOwn" type="button">Tạo danh thiếp của tôi</button>
     </div>
     <div id="mPub"></div>
-  </div>
+  </section>
 </main>
 
-<div id="app">
-<div class="wrap">
-  <header class="top">
-    <div class="topbar">
-      <h1 class="h3d">APP KẾT NỐI</h1>
-      <button class="btn sec sm" id="bAcct">Tài khoản</button>
+<!-- ===== Màn đăng nhập / đăng ký / quên mật khẩu ===== -->
+<main id="auth" class="shell narrow hide">
+  <div class="hero">
+    <img src="/icons/icon-512.png" alt="Kết nối – Hợp tác – Thành công" class="heroimg">
+    <h1 class="h3d">APP KẾT NỐI</h1>
+    <p class="sub">Kết nối – Hợp tác – Thành công</p>
+  </div>
+  <section class="glass">
+    <div class="seg" id="authSeg">
+      <button type="button" data-a="login" class="on">Đăng nhập</button>
+      <button type="button" data-a="signup">Tạo tài khoản</button>
     </div>
-    <p class="sub" id="acct">Danh thiếp QR · quét là lưu vào danh bạ</p>
+
+    <form id="fLogin" class="aform">
+      <label for="l_email">Email</label>
+      <input id="l_email" type="email" autocomplete="username" inputmode="email" required>
+      <label for="l_pass">Mật khẩu</label>
+      <div class="pw"><input id="l_pass" type="password" autocomplete="current-password" required minlength="8"><button type="button" class="eye" data-eye="l_pass">Hiện</button></div>
+      <button class="btn block" type="submit">Đăng nhập</button>
+      <button class="link" type="button" id="goForgot">Quên mật khẩu?</button>
+    </form>
+
+    <form id="fSignup" class="aform hide">
+      <label for="s_email">Email</label>
+      <input id="s_email" type="email" autocomplete="username" inputmode="email" required>
+      <label for="s_pass">Mật khẩu (từ 8 ký tự)</label>
+      <div class="pw"><input id="s_pass" type="password" autocomplete="new-password" required minlength="8"><button type="button" class="eye" data-eye="s_pass">Hiện</button></div>
+      <label for="s_pass2">Nhập lại mật khẩu</label>
+      <input id="s_pass2" type="password" autocomplete="new-password" required minlength="8">
+      <button class="btn block" type="submit">Tạo tài khoản</button>
+      <p class="muted">Bạn sẽ nhận email xác nhận. Bấm liên kết trong email để kích hoạt tài khoản.</p>
+    </form>
+
+    <form id="fForgot" class="aform hide">
+      <p class="lead">Quên mật khẩu?</p>
+      <p class="muted">Nhập email đã đăng ký. Chúng tôi sẽ gửi liên kết đặt lại mật khẩu; liên kết có thời hạn.</p>
+      <label for="f_mail">Email</label>
+      <input id="f_mail" type="email" autocomplete="username" inputmode="email" required>
+      <button class="btn block" type="submit" id="bForgot">Gửi liên kết đặt lại</button>
+      <button class="link" type="button" id="backLogin">Quay lại đăng nhập</button>
+    </form>
+
+    <form id="fRecover" class="aform hide">
+      <p class="lead">Đặt mật khẩu mới</p>
+      <label for="r_pass">Mật khẩu mới (từ 8 ký tự)</label>
+      <div class="pw"><input id="r_pass" type="password" autocomplete="new-password" required minlength="8"><button type="button" class="eye" data-eye="r_pass">Hiện</button></div>
+      <label for="r_pass2">Nhập lại mật khẩu mới</label>
+      <input id="r_pass2" type="password" autocomplete="new-password" required minlength="8">
+      <button class="btn block" type="submit">Lưu mật khẩu mới</button>
+    </form>
+
+    <div id="mAuth"></div>
+  </section>
+  <footer class="foot slim"><p>Được làm bởi <strong class="auth"><span class="cc">C</span>Đào Duy Thanh</strong> · Since 2026</p></footer>
+</main>
+
+<!-- ===== Ứng dụng chính ===== -->
+<div id="app" class="hide">
+  <header class="appbar">
+    <div class="brandrow"><img src="/icons/logo-160.png" alt="" class="logo sm"><div><h1 class="h3d">APP KẾT NỐI</h1><p class="sub" id="acct">Danh thiếp QR</p></div></div>
   </header>
 
-  <nav class="tabs" id="tabs">
-    <button data-t="create" class="on">Tạo danh thiếp</button>
-    <button data-t="mine">Danh thiếp của tôi</button>
-    <button data-t="scan">Quét QR</button>
+  <nav class="nav" id="tabs" aria-label="Điều hướng">
+    <button data-t="create" class="on"><span class="ni">＋</span><span>Tạo</span></button>
+    <button data-t="mine"><span class="ni">▤</span><span>Của tôi</span></button>
+    <button data-t="scan"><span class="ni">◎</span><span>Quét QR</span></button>
+    <button data-t="acct"><span class="ni">●</span><span>Tài khoản</span></button>
   </nav>
 
-  <!-- TẠO -->
-  <section id="t-create">
-    <div class="grid">
-      <div class="panel">
-        <h2 class="h3d s" id="formTitle">Thông tin</h2>
-        <label for="f_name">Họ tên *</label><input id="f_name" autocomplete="name">
-        <label for="f_phone">Điện thoại *</label><input id="f_phone" inputmode="tel" autocomplete="tel">
-        <label for="f_email">Email</label><input id="f_email" type="email" autocomplete="email">
-        <label for="f_addr">Địa chỉ</label><input id="f_addr" autocomplete="street-address">
-        <label for="f_company">Công ty</label><input id="f_company" autocomplete="organization">
-        <label for="f_dept">Bộ phận</label><input id="f_dept">
-        <div class="row">
-          <button class="btn" id="bGen">Tạo QR</button>
-          <button class="btn sec" id="bSave">Lưu danh thiếp</button>
-          <button class="btn sec" id="bNew">Làm mới</button>
+  <main class="shell">
+    <!-- TẠO -->
+    <section id="t-create">
+      <div class="grid">
+        <div class="glass">
+          <h2 class="h3d s" id="formTitle">Thông tin</h2>
+          <label for="f_name">Họ tên *</label><input id="f_name" autocomplete="name">
+          <label for="f_phone">Điện thoại *</label><input id="f_phone" inputmode="tel" autocomplete="tel">
+          <label for="f_email">Email</label><input id="f_email" type="email" autocomplete="off">
+          <label for="f_addr">Địa chỉ</label><input id="f_addr" autocomplete="street-address">
+          <label for="f_company">Công ty</label><input id="f_company" autocomplete="organization">
+          <label for="f_dept">Bộ phận</label><input id="f_dept">
+          <div class="row">
+            <button class="btn" id="bGen" type="button">Tạo QR</button>
+            <button class="btn ghost" id="bSave" type="button">Lưu danh thiếp</button>
+            <button class="btn ghost" id="bNew" type="button">Làm mới</button>
+          </div>
+          <div id="m1"></div>
         </div>
-        <div id="m1"></div>
+        <div class="glass">
+          <h2 class="h3d s">Xem trước danh thiếp</h2>
+          <div class="bc" id="pv"></div>
+          <div class="qrbox">
+            <canvas id="qr" width="10" height="10" aria-label="Mã QR danh thiếp"></canvas>
+            <p class="muted" id="qrHint">Nhấn “Tạo QR” để tạo mã.</p>
+          </div>
+          <div class="row center">
+            <button class="btn" id="bPng" type="button" disabled>Tải QR (PNG)</button>
+            <button class="btn ghost" id="bShare" type="button" disabled>Chia sẻ QR</button>
+            <button class="btn ghost" id="bLink" type="button" disabled>Chia sẻ đường dẫn</button>
+          </div>
+          <div id="m2"></div>
+        </div>
       </div>
-      <div class="panel">
-        <h2 class="h3d s">Xem trước danh thiếp</h2>
-        <div class="bc" id="pv">
-          <p class="nm" id="p_name">Họ tên</p>
-          <p class="co" id="p_co">Công ty · Bộ phận</p>
-          <p><span class="ic">Điện thoại</span><span id="p_phone">—</span></p>
-          <p><span class="ic">Email</span><span id="p_email">—</span></p>
-          <p><span class="ic">Địa chỉ</span><span id="p_addr">—</span></p>
-        </div>
-        <div class="qrbox">
-          <canvas id="qr" width="10" height="10" aria-label="Mã QR danh thiếp"></canvas>
-          <p class="muted" id="qrHint">Nhấn “Tạo QR” để tạo mã.</p>
-        </div>
-        <div class="row center">
-          <button class="btn" id="bPng" disabled>Tải QR (PNG)</button>
-          <button class="btn sec" id="bShare" disabled>Chia sẻ QR</button>
-          <button class="btn sec" id="bLink" disabled>Chia sẻ đường dẫn</button>
-        </div>
-        <div id="m2"></div>
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- CỦA TÔI -->
-  <section id="t-mine" class="hide">
-    <div class="panel">
-      <h2 class="h3d s">Danh thiếp đã lưu</h2>
-      <p class="muted" id="mineNote"></p>
-      <div class="list" id="list"></div>
-    </div>
-  </section>
-
-  <!-- QUÉT -->
-  <section id="t-scan" class="hide">
-    <div class="grid">
-      <div class="panel">
-        <h2 class="h3d s">Quét mã QR</h2>
-        <p class="muted">Bấm “Mở camera” để dùng máy ảnh của thiết bị. Thông tin sẽ tự điền vào bên cạnh.</p>
-        <div class="camwrap" id="camwrap"><video id="vid" playsinline muted></video><div class="camph" id="camph">Camera đang tắt</div></div>
-        <div class="row">
-          <button class="btn" id="bCam">Mở camera</button>
-          <button class="btn sec" id="bFlip">Đổi camera</button>
-          <button class="btn sec" id="bStop">Tắt</button>
-          <label class="btn sec filebtn">Chọn ảnh QR<input type="file" id="fImg" accept="image/*" capture="environment" class="hide"></label>
-        </div>
-        <div id="m3"></div>
+    <!-- CỦA TÔI -->
+    <section id="t-mine" class="hide">
+      <div class="glass">
+        <h2 class="h3d s">Danh thiếp đã lưu</h2>
+        <p class="muted" id="mineNote"></p>
+        <div class="list" id="list"></div>
       </div>
-      <div class="panel">
-        <h2 class="h3d s">Danh thiếp quét được</h2>
-        <div class="bc" id="sv">
-          <p class="nm" id="s_name">—</p>
-          <p class="co" id="s_co">—</p>
-          <p><span class="ic">Điện thoại</span><span id="s_phone">—</span></p>
-          <p><span class="ic">Email</span><span id="s_email">—</span></p>
-          <p><span class="ic">Địa chỉ</span><span id="s_addr">—</span></p>
-        </div>
-        <div class="row">
-          <button class="btn" id="bOk" disabled>Đồng ý – lưu vào danh bạ</button>
-          <button class="btn sec" id="bToForm" disabled>Chép vào form</button>
-        </div>
-        <div id="m4"></div>
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <footer class="foot">
-    <div class="h3d brand">APP KẾT NỐI</div>
-    <p>Được làm bởi <strong class="auth"><span class="cc" aria-label="Bản quyền">C</span>Đào Duy Thanh</strong></p>
-    <p class="since">Since 2026</p>
-  </footer>
+    <!-- QUÉT -->
+    <section id="t-scan" class="hide">
+      <div class="grid">
+        <div class="glass">
+          <h2 class="h3d s">Quét mã QR</h2>
+          <p class="muted">Bấm “Mở camera” để dùng máy ảnh của thiết bị. Thông tin sẽ tự điền sang khung bên cạnh.</p>
+          <div class="camwrap" id="camwrap"><video id="vid" playsinline muted></video><div class="camph">Camera đang tắt</div></div>
+          <div class="row">
+            <button class="btn" id="bCam" type="button">Mở camera</button>
+            <button class="btn ghost" id="bFlip" type="button">Đổi camera</button>
+            <button class="btn ghost" id="bStop" type="button">Tắt</button>
+            <label class="btn ghost filebtn">Chọn ảnh QR<input type="file" id="fImg" accept="image/*" capture="environment" class="hide"></label>
+          </div>
+          <div id="m3"></div>
+        </div>
+        <div class="glass">
+          <h2 class="h3d s">Danh thiếp quét được</h2>
+          <div class="bc" id="sv"></div>
+          <div class="row">
+            <button class="btn" id="bOk" type="button" disabled>Đồng ý – lưu vào danh bạ</button>
+            <button class="btn ghost" id="bToForm" type="button" disabled>Chép vào form</button>
+          </div>
+          <div id="m4"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TÀI KHOẢN -->
+    <section id="t-acct" class="hide">
+      <div class="grid">
+        <div class="glass">
+          <h2 class="h3d s">Tài khoản</h2>
+          <p class="muted" id="acctInfo"></p>
+          <div class="row"><button class="btn danger" id="bOut" type="button">Đăng xuất</button></div>
+        </div>
+        <div class="glass" id="pwBox">
+          <h2 class="h3d s">Đổi mật khẩu</h2>
+          <form id="fChange">
+            <label for="c_pass">Mật khẩu mới (từ 8 ký tự)</label>
+            <div class="pw"><input id="c_pass" type="password" autocomplete="new-password" required minlength="8"><button type="button" class="eye" data-eye="c_pass">Hiện</button></div>
+            <label for="c_pass2">Nhập lại mật khẩu mới</label>
+            <input id="c_pass2" type="password" autocomplete="new-password" required minlength="8">
+            <div class="row"><button class="btn" type="submit">Đổi mật khẩu</button></div>
+          </form>
+          <div id="mChg"></div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="foot">
+      <div class="h3d brand">APP KẾT NỐI</div>
+      <p>Được làm bởi <strong class="auth"><span class="cc" aria-label="Bản quyền">C</span>Đào Duy Thanh</strong></p>
+      <p class="since">Since 2026</p>
+    </footer>
+  </main>
 </div>
-</div>
-
-<!-- Hộp thoại tài khoản -->
-<dialog id="dlg">
-  <form method="dialog" class="dform" id="dform">
-    <h2 class="h3d s">Tài khoản</h2>
-    <div id="dBody"></div>
-    <div class="row"><button class="btn sec" value="close">Đóng</button></div>
-  </form>
-</dialog>
 
 <script src="/config.js"></script>
 <script src="/lib/qrcode.js"></script>

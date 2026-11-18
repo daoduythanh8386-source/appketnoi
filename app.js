@@ -5,7 +5,7 @@ var $ = function (id) { return document.getElementById(id); };
 var F = ["name", "phone", "email", "addr", "company", "dept"];
 var cur = {}, editId = null, qrText = "", scanned = null;
 var cards = [], stream = null, loopId = 0, facing = "environment", detector = null;
-var sb = null, user = null;
+var sb = null, user = null, recovering = false, cooldown = 0;
 
 /* ---------- Tiện ích ---------- */
 function msg(id, t, err) {
@@ -25,7 +25,7 @@ function cardHtml(el, o) {
     var x = document.createElement("p"), a = document.createElement("span"), b = document.createElement("span");
     a.className = "ic"; a.textContent = label; b.textContent = v || "—"; x.appendChild(a); x.appendChild(b); el.appendChild(x);
   }
-  p("nm", o.name || "—"); p("co", [o.company, o.dept].filter(Boolean).join(" · ") || "—");
+  p("nm", o.name || "Họ tên"); p("co", [o.company, o.dept].filter(Boolean).join(" · ") || "Công ty · Bộ phận");
   line("Điện thoại", o.phone); line("Email", o.email); line("Địa chỉ", o.addr);
 }
 
@@ -92,9 +92,7 @@ async function saveContact(o, out) {
 }
 
 /* ---------- QR ---------- */
-function preview() {
-  cur = read(); cardHtml($("pv"), cur);
-}
+function preview() { cur = read(); cardHtml($("pv"), cur); }
 function drawQR(text, canvas) {
   qrcode.stringToBytes = qrcode.stringToBytesFuncs["UTF-8"];
   var q = qrcode(0, "M"); q.addData(text); q.make();
@@ -123,7 +121,7 @@ async function refresh() {
     var r = await sb.from("cards").select("id,data,updated_at").order("updated_at", { ascending: false });
     if (r.error) { msg("m1", "Không tải được danh sách: " + r.error.message, true); cards = []; }
     else cards = r.data.map(function (x) { var d = x.data || {}; d.id = x.id; d.updated = Date.parse(x.updated_at) || 0; return d; });
-  } else cards = loadLocal();
+  } else cards = sb ? [] : loadLocal();
   renderList(); renderAcct();
 }
 async function saveCard() {
@@ -137,21 +135,21 @@ async function saveCard() {
     await refresh(); msg("m1", "Đã lưu vào tài khoản của bạn.");
   } else {
     cards = loadLocal().filter(function (c) { return c.id !== id; }); cards.unshift(o); saveLocal(); renderList();
-    msg("m1", "Đã lưu trên thiết bị này. Đăng nhập để lưu theo tài khoản.");
+    msg("m1", "Đã lưu trên thiết bị này.");
   }
   editId = id; $("formTitle").textContent = "Đang sửa danh thiếp";
 }
 function renderList() {
   var L = $("list"); L.innerHTML = "";
-  $("mineNote").textContent = (sb && user) ? "Lưu theo tài khoản " + user.email + ", dùng được trên mọi thiết bị." : "Chưa đăng nhập: danh thiếp chỉ lưu trên thiết bị này.";
+  $("mineNote").textContent = (sb && user) ? "Lưu theo tài khoản " + user.email + ", dùng được trên mọi thiết bị." : "Chế độ lưu trên thiết bị này.";
   if (!cards.length) { var e = document.createElement("p"); e.className = "muted"; e.textContent = "Chưa có danh thiếp nào."; L.appendChild(e); return; }
   cards.forEach(function (c) {
     var d = document.createElement("div"); d.className = "item";
     var t = document.createElement("div"), b = document.createElement("b"), s = document.createElement("div");
     b.textContent = c.name; s.className = "muted"; s.textContent = [c.company, c.phone].filter(Boolean).join(" · "); t.appendChild(b); t.appendChild(s);
     var r = document.createElement("div"); r.className = "row"; r.style.marginTop = "0";
-    [["Sửa / Tạo lại QR", "btn sec sm", function () { edit(c); }], ["Xóa", "btn dng sm", function () { del(c); }]].forEach(function (x) {
-      var bt = document.createElement("button"); bt.className = x[1]; bt.textContent = x[0]; bt.onclick = x[2]; r.appendChild(bt);
+    [["Sửa / Tạo lại QR", "btn ghost sm", function () { edit(c); }], ["Xóa", "btn danger sm", function () { del(c); }]].forEach(function (x) {
+      var bt = document.createElement("button"); bt.type = "button"; bt.className = x[1]; bt.textContent = x[0]; bt.onclick = x[2]; r.appendChild(bt);
     });
     d.appendChild(t); d.appendChild(r); L.appendChild(d);
   });
@@ -162,49 +160,115 @@ async function del(c) {
   if (sb && user) { var r = await sb.from("cards").delete().eq("id", c.id); if (r.error) { alert(r.error.message); return; } await refresh(); }
   else { cards = loadLocal().filter(function (x) { return x.id !== c.id; }); saveLocal(); renderList(); }
 }
-
-/* ---------- Tài khoản ---------- */
-function renderAcct() {
-  $("acct").textContent = (sb && user) ? "Đã đăng nhập: " + user.email : "Danh thiếp QR · quét là lưu vào danh bạ";
-  $("bAcct").textContent = (sb && user) ? "Đăng xuất / Tài khoản" : "Tài khoản";
+function resetForm() {
+  editId = null; write({}); $("formTitle").textContent = "Thông tin"; $("qr").width = $("qr").height = 10; qrText = "";
+  ["bPng", "bShare", "bLink"].forEach(function (b) { $(b).disabled = true; });
+  $("qrHint").textContent = "Nhấn “Tạo QR” để tạo mã."; preview(); msg("m1", ""); msg("m2", "");
 }
-function openAcct() {
-  var B = $("dBody"); B.innerHTML = "";
-  function el(tag, props, txt) { var x = document.createElement(tag); Object.assign(x, props || {}); if (txt) x.textContent = txt; return x; }
-  if (!sb) {
-    B.appendChild(el("p", { className: "muted" }, "Tài khoản đám mây chưa được bật. Danh thiếp đang lưu trên thiết bị này. Chủ app bật tài khoản theo hướng dẫn trong README (Supabase)."));
-  } else if (user) {
-    B.appendChild(el("p", {}, "Đang đăng nhập: " + user.email));
-    var o = el("button", { type: "button", className: "btn dng" }, "Đăng xuất");
-    o.onclick = async function () { await sb.auth.signOut(); user = null; await refresh(); $("dlg").close(); };
-    B.appendChild(o);
-  } else {
-    var em = el("input", { type: "email", placeholder: "Email", autocomplete: "email" });
-    var pw = el("input", { type: "password", placeholder: "Mật khẩu (từ 6 ký tự)", autocomplete: "current-password" });
-    var out = el("div", {}); var row = el("div", { className: "row" });
-    function go(kind) {
-      return async function () {
-        var r = kind === "in" ? await sb.auth.signInWithPassword({ email: em.value.trim(), password: pw.value })
-                              : await sb.auth.signUp({ email: em.value.trim(), password: pw.value });
-        out.innerHTML = "";
-        if (r.error) { var m = el("div", { className: "msg er" }, r.error.message); out.appendChild(m); return; }
-        if (kind === "up" && !r.data.session) { out.appendChild(el("div", { className: "msg" }, "Đã gửi email xác nhận. Hãy bấm liên kết trong email rồi đăng nhập.")); return; }
-        user = r.data.user || (r.data.session && r.data.session.user); await refresh(); $("dlg").close();
-      };
-    }
-    var a = el("button", { type: "button", className: "btn" }, "Đăng nhập"), b = el("button", { type: "button", className: "btn sec" }, "Đăng ký");
-    a.onclick = go("in"); b.onclick = go("up");
-    [em, pw].forEach(function (i) { i.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); go("in")(); } }); });
-    row.appendChild(a); row.appendChild(b);
-    B.appendChild(el("label", {}, "Email")); B.appendChild(em); B.appendChild(el("label", {}, "Mật khẩu")); B.appendChild(pw); B.appendChild(row); B.appendChild(out);
-  }
-  $("dlg").showModal();
+
+/* ---------- Màn hình ---------- */
+function screen(name) {
+  ["pub", "auth", "app"].forEach(function (s) { $(s).classList.toggle("hide", s !== name); });
+  if (name !== "app") stopCam();
+  window.scrollTo(0, 0);
+}
+function renderAcct() {
+  var cloud = !!(sb && user);
+  $("acct").textContent = cloud ? user.email : "Danh thiếp QR · quét là lưu vào danh bạ";
+  $("acctInfo").textContent = cloud ? "Đang đăng nhập bằng " + user.email + ". Danh thiếp được lưu theo tài khoản và đồng bộ trên mọi thiết bị."
+    : "Tài khoản đám mây chưa được bật nên danh thiếp đang lưu trên thiết bị này.";
+  $("bOut").classList.toggle("hide", !cloud); $("pwBox").classList.toggle("hide", !cloud);
+}
+
+/* ---------- Xác thực ---------- */
+function authView(v) {
+  var map = { login: "fLogin", signup: "fSignup", forgot: "fForgot", recover: "fRecover" };
+  Object.keys(map).forEach(function (k) { $(map[k]).classList.toggle("hide", k !== v); });
+  $("authSeg").classList.toggle("hide", v === "forgot" || v === "recover");
+  Array.prototype.forEach.call($("authSeg").children, function (b) { b.classList.toggle("on", b.dataset.a === v); });
+  msg("mAuth", "");
+}
+function viMsg(e) {
+  var m = (e && e.message || "").toLowerCase();
+  if (m.indexOf("invalid login") >= 0) return "Email hoặc mật khẩu không đúng.";
+  if (m.indexOf("not confirmed") >= 0) return "Email chưa được xác nhận. Hãy bấm liên kết trong email đã gửi cho bạn.";
+  if (m.indexOf("rate limit") >= 0 || m.indexOf("too many") >= 0 || e && e.status === 429) return "Bạn thao tác quá nhanh. Vui lòng đợi vài phút rồi thử lại.";
+  if (m.indexOf("same password") >= 0) return "Mật khẩu mới phải khác mật khẩu cũ.";
+  if (m.indexOf("weak") >= 0 || m.indexOf("at least") >= 0) return "Mật khẩu quá yếu. Hãy dùng ít nhất 8 ký tự, có cả chữ và số.";
+  if (m.indexOf("session") >= 0 && m.indexOf("missing") >= 0) return "Liên kết đã hết hạn hoặc đã dùng rồi. Hãy yêu cầu liên kết mới.";
+  return "Có lỗi xảy ra: " + (e && e.message || "không rõ") + ".";
+}
+function pwCheck(a, b) {
+  if (a.length < 8) return "Mật khẩu cần có ít nhất 8 ký tự.";
+  if (!/[A-Za-z]/.test(a) || !/[0-9]/.test(a)) return "Mật khẩu cần có cả chữ và số.";
+  if (a !== b) return "Hai mật khẩu nhập lại chưa khớp.";
+  return "";
+}
+function busy(form, on) { Array.prototype.forEach.call(form.querySelectorAll("button"), function (b) { if (on) b.setAttribute("disabled", ""); else if (b.id !== "bForgot" || !cooldown) b.removeAttribute("disabled"); }); }
+function startCooldown() {
+  cooldown = 60; var b = $("bForgot");
+  (function tick() { if (cooldown <= 0) { b.textContent = "Gửi liên kết đặt lại"; b.removeAttribute("disabled"); return; }
+    b.setAttribute("disabled", ""); b.textContent = "Gửi lại sau " + cooldown + " giây"; cooldown--; setTimeout(tick, 1000); })();
+}
+function bindAuth() {
+  $("authSeg").onclick = function (e) { var a = e.target.dataset && e.target.dataset.a; if (a) authView(a); };
+  $("goForgot").onclick = function () { $("f_mail").value = $("l_email").value; authView("forgot"); };
+  $("backLogin").onclick = function () { authView("login"); };
+  document.addEventListener("click", function (e) {
+    var id = e.target.dataset && e.target.dataset.eye; if (!id) return;
+    var i = $(id), show = i.type === "password"; i.type = show ? "text" : "password"; e.target.textContent = show ? "Ẩn" : "Hiện";
+  });
+
+  $("fLogin").onsubmit = async function (e) {
+    e.preventDefault(); busy(this, true);
+    var r = await sb.auth.signInWithPassword({ email: $("l_email").value.trim(), password: $("l_pass").value });
+    busy(this, false);
+    if (r.error) { msg("mAuth", viMsg(r.error), true); return; }
+    $("l_pass").value = "";
+  };
+  $("fSignup").onsubmit = async function (e) {
+    e.preventDefault(); var bad = pwCheck($("s_pass").value, $("s_pass2").value);
+    if (bad) { msg("mAuth", bad, true); return; }
+    busy(this, true);
+    var r = await sb.auth.signUp({ email: $("s_email").value.trim(), password: $("s_pass").value, options: { emailRedirectTo: location.origin + "/" } });
+    busy(this, false);
+    if (r.error) { msg("mAuth", viMsg(r.error), true); return; }
+    $("s_pass").value = $("s_pass2").value = "";
+    if (!(r.data && r.data.session)) msg("mAuth", "Gần xong rồi! Hãy mở email và bấm liên kết xác nhận, sau đó quay lại đăng nhập.");
+  };
+  $("fForgot").onsubmit = async function (e) {
+    e.preventDefault(); if (cooldown > 0) return;
+    busy(this, true);
+    var r = await sb.auth.resetPasswordForEmail($("f_mail").value.trim(), { redirectTo: location.origin + "/" });
+    busy(this, false);
+    if (r.error && (r.error.status === 429 || /rate|too many/i.test(r.error.message || ""))) { msg("mAuth", viMsg(r.error), true); return; }
+    // Luôn trả lời giống nhau để không lộ email nào đã đăng ký
+    msg("mAuth", "Nếu email này đã đăng ký, một liên kết đặt lại mật khẩu vừa được gửi. Hãy kiểm tra hộp thư (cả mục Spam).");
+    startCooldown();
+  };
+  $("fRecover").onsubmit = async function (e) {
+    e.preventDefault(); var bad = pwCheck($("r_pass").value, $("r_pass2").value);
+    if (bad) { msg("mAuth", bad, true); return; }
+    busy(this, true);
+    var r = await sb.auth.updateUser({ password: $("r_pass").value });
+    busy(this, false);
+    if (r.error) { msg("mAuth", viMsg(r.error), true); return; }
+    $("r_pass").value = $("r_pass2").value = ""; recovering = false;
+    history.replaceState(null, "", location.pathname); user = r.data.user; await refresh(); show("acct"); screen("app");
+    msg("mChg", "Đã đặt mật khẩu mới thành công.");
+  };
+  $("fChange").onsubmit = async function (e) {
+    e.preventDefault(); var bad = pwCheck($("c_pass").value, $("c_pass2").value);
+    if (bad) { msg("mChg", bad, true); return; }
+    var r = await sb.auth.updateUser({ password: $("c_pass").value });
+    if (r.error) { msg("mChg", viMsg(r.error), true); return; }
+    $("c_pass").value = $("c_pass2").value = ""; msg("mChg", "Đã đổi mật khẩu.");
+  };
+  $("bOut").onclick = async function () { await sb.auth.signOut(); };
 }
 
 /* ---------- Camera + quét ---------- */
-function showScan(o) {
-  scanned = o; cardHtml($("sv"), o); $("bOk").disabled = $("bToForm").disabled = false;
-}
+function showScan(o) { scanned = o; cardHtml($("sv"), o); $("bOk").disabled = $("bToForm").disabled = false; }
 function handleText(t) {
   var o = null;
   try { var u = new URL(t); var c = u.searchParams.get("c"); if (c) o = dec(c); } catch (e) {}
@@ -250,26 +314,22 @@ async function startCam() {
 
 /* ---------- Tab ---------- */
 function show(t) {
-  ["create", "mine", "scan"].forEach(function (x) { $("t-" + x).classList.toggle("hide", x !== t); });
+  ["create", "mine", "scan", "acct"].forEach(function (x) { $("t-" + x).classList.toggle("hide", x !== t); });
   Array.prototype.forEach.call($("tabs").children, function (b) { b.classList.toggle("on", b.dataset.t === t); });
   if (t !== "scan") stopCam();
+  window.scrollTo(0, 0);
 }
 
 /* ---------- Gắn sự kiện ---------- */
 function bind() {
-  $("tabs").onclick = function (e) { var t = e.target.dataset && e.target.dataset.t; if (t) show(t); };
+  $("tabs").onclick = function (e) { var b = e.target.closest("button"); if (b && b.dataset.t) show(b.dataset.t); };
   F.forEach(function (k) { $("f_" + k).addEventListener("input", preview); });
-  $("bGen").onclick = gen; $("bSave").onclick = saveCard; $("bAcct").onclick = openAcct;
-  $("bNew").onclick = function () {
-    editId = null; write({}); $("formTitle").textContent = "Thông tin"; $("qr").width = $("qr").height = 10; qrText = "";
-    ["bPng", "bShare", "bLink"].forEach(function (b) { $(b).disabled = true; });
-    $("qrHint").textContent = "Nhấn “Tạo QR” để tạo mã."; preview(); msg("m1", ""); msg("m2", "");
-  };
+  $("bGen").onclick = gen; $("bSave").onclick = saveCard; $("bNew").onclick = resetForm;
   $("bPng").onclick = async function () {
-    var b = await qrBlob(), name = "QR-" + slug(cur.name) + ".png", f = new File([b], name, { type: "image/png" });
+    var b = await qrBlob(), name = "QR-" + slug(cur.name) + ".png";
     var url = URL.createObjectURL(b), a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
-    msg("m2", "Đã tải ảnh QR (PNG). Nếu thiết bị không tự lưu, hãy nhấn “Chia sẻ QR”."); void f;
+    msg("m2", "Đã tải ảnh QR (PNG). Nếu thiết bị không tự lưu, hãy nhấn “Chia sẻ QR”.");
   };
   $("bShare").onclick = async function () {
     var b = await qrBlob(), f = new File([b], "QR-" + slug(cur.name) + ".png", { type: "image/png" });
@@ -304,23 +364,42 @@ function bind() {
 
 /* ---------- Khởi động ---------- */
 async function init() {
-  bind(); preview();
+  bind(); preview(); cardHtml($("sv"), {});
 
   var c = new URLSearchParams(location.search).get("c"), pubO = c && dec(c);
   if (pubO) {
-    $("app").classList.add("hide"); $("pub").classList.remove("hide"); cardHtml($("pubCard"), pubO);
+    cardHtml($("pubCard"), pubO);
     $("pubSave").onclick = function () { saveContact(pubO, "mPub"); };
-    $("pubOwn").onclick = function () { history.replaceState(null, "", "/"); $("pub").classList.add("hide"); $("app").classList.remove("hide"); };
+    $("pubOwn").onclick = function () { history.replaceState(null, "", "/"); boot(); };
+    screen("pub"); register(); return;
   }
-
+  boot(); register();
+}
+function register() {
+  if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) navigator.serviceWorker.register("/sw.js").catch(function () {});
+}
+async function boot() {
   var cfg = window.APP_CONFIG || {};
   if (cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY && window.supabase) {
-    sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+    bindAuth();
+    recovering = /type=recovery/.test(location.hash);
+    sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: "implicit" } });
+    sb.auth.onAuthStateChange(function (ev, sess) {
+      setTimeout(async function () {
+        user = sess ? sess.user : null;
+        if (ev === "PASSWORD_RECOVERY") { recovering = true; authView("recover"); screen("auth"); return; }
+        if (recovering) { authView("recover"); screen("auth"); return; }
+        if (user) { await refresh(); screen("app"); }
+        else { cards = []; renderList(); renderAcct(); resetForm(); authView("login"); screen("auth"); }
+      }, 0);
+    });
     var s = await sb.auth.getSession(); user = s.data && s.data.session ? s.data.session.user : null;
-    sb.auth.onAuthStateChange(function (_e, sess) { user = sess ? sess.user : null; refresh(); });
+    if (recovering) { authView("recover"); screen("auth"); }
+    else if (user) { await refresh(); screen("app"); }
+    else { authView("login"); screen("auth"); }
+  } else {
+    await refresh(); screen("app");
   }
-  await refresh();
-  if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) navigator.serviceWorker.register("/sw.js").catch(function () {});
 }
 init();
 })();
